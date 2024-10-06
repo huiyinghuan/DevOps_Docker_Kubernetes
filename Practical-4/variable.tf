@@ -1,6 +1,6 @@
 variable "do_token" {
     type = string
-    # default = "deafult"
+    default = "dop_v1_bf490fcfb5ff4b9fbd681ca61e16e6d638d33c9f55fb7609a4a58d351874e3e5"
     sensitive = true
 }
 
@@ -18,3 +18,6 @@ variable "region"{
     type = string
     default = "sgp1"
 }
+
+
+

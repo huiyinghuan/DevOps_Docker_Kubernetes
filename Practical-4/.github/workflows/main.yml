@@ -10,38 +10,56 @@ on:
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-latest  # Specify the OS for your job
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v1
-      with:
-        terraform_version: 1.9.6  # Or your preferred version
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18.20.4'  # Set the desired Node.js version
 
-    - name: Set up DigitalOcean CLI
-      run: sudo snap install doctl
+      - name: Install dependencies
+        run: npm install
 
-    - name: Authenticate with DigitalOcean
-      run: doctl auth init --access-token ${{ secrets.DO_TOKEN }}
+      - name: Install dependencies for doctl
+        run: |
+          apt-get update || true
+          apt-get install -y unzip curl jq || true
 
-    - name: Initialize Terraform
-      run: terraform init
+      - name: Install doctl
+        run: |
+          # Fetch the latest doctl version from GitHub API
+          DOCTL_VERSION=$(curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r .tag_name)
+          echo "Installing doctl version: ${DOCTL_VERSION}"
+          
+          # Download and install doctl
+          curl -fsSL "https://github.com/digitalocean/doctl/releases/download/${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-$(uname -s)-$(uname -m).tar.gz" | tar -xzv
+          sudo mv doctl /usr/local/bin/
+          sudo chmod +x /usr/local/bin/doctl
+      
 
-    - name: Terraform Plan
-      run: terraform plan
-    
+      - name: Verify doctl installation
+        run: doctl version
 
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false
-  
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.9.6  # Specify your Terraform version
 
-    # - name: Verify Kubernetes Setup
-    #   run: |
-    #     kubectl get nodes
-    #     kubectl get svc
-    #   env:
-    #     KUBECONFIG: ${KUBECONFIG}  # Ensure Kubernetes context is set properly
+      - name: Authenticate with DigitalOcean
+        run: echo "${{ secrets.DO_TOKEN }}" | doctl auth init --access-token
+
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: Practical-4  # Change to your directory
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: Practical-4  # Change to your directory
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false
+        working-directory: Practical-4  # Change to your directory
