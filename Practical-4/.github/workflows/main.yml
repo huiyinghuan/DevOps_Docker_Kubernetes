@@ -10,7 +10,9 @@ on:
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest  # Specify the OS for your job
+    runs-on: ubuntu-latest
+    container:
+      image: node:14-buster
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -18,48 +20,55 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '18.20.4'  # Set the desired Node.js version
+          node-version: '18.20.4'
 
       - name: Install dependencies
         run: npm install
 
       - name: Install dependencies for doctl
         run: |
-          apt-get update || true
-          apt-get install -y unzip curl jq || true
+          apt-get update
+          apt-get install -y unzip curl
 
       - name: Install doctl
         run: |
-          # Fetch the latest doctl version from GitHub API
-          DOCTL_VERSION=$(curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r .tag_name)
-          echo "Installing doctl version: ${DOCTL_VERSION}"
+          DOCTL_VERSION="1.115.0"
+          DOWNLOAD_URL="https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz"
           
-          # Download and install doctl
-          curl -fsSL "https://github.com/digitalocean/doctl/releases/download/${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-$(uname -s)-$(uname -m).tar.gz" | tar -xzv
-          sudo mv doctl /usr/local/bin/
-          sudo chmod +x /usr/local/bin/doctl
+          echo "Downloading from: ${DOWNLOAD_URL}"
+          
+          # Download and extract doctl
+          curl -fsSL "$DOWNLOAD_URL" | tar -xzv
+          
+          # Move the doctl binary to /usr/local/bin
+          mv doctl /usr/local/bin/
+          chmod +x /usr/local/bin/doctl
       
-
       - name: Verify doctl installation
         run: doctl version
+        
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
         with:
-          terraform_version: 1.9.6  # Specify your Terraform version
-
+          terraform_version: 1.9.6 
+      
       - name: Authenticate with DigitalOcean
-        run: echo "${{ secrets.DO_TOKEN }}" | doctl auth init --access-token
+        run: |
+          doctl auth init --access-token=$DO_TOKEN --interactive=false
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DO_TOKEN }}
+  
 
       - name: Initialize Terraform
         run: terraform init
-        working-directory: Practical-4  # Change to your directory
+        # working-directory: Practical-4  # Use absolute path for testing
 
       - name: Terraform Plan
         run: terraform plan
-        working-directory: Practical-4  # Change to your directory
+        # working-directory: Practical-4
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false
-        working-directory: Practical-4  # Change to your directory
+        # working-directory: Practical-4
