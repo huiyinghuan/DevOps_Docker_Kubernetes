@@ -62,13 +62,13 @@ jobs:
 
       - name: Initialize Terraform
         run: terraform init
-        # working-directory: Practical-4  # Use absolute path for testing
+        working-directory: Practical-4  # Use absolute path for testing
 
       - name: Terraform Plan
         run: terraform plan
-        # working-directory: Practical-4
+        working-directory: Practical-4
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false
-        # working-directory: Practical-4
+        working-directory: Practical-4
